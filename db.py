@@ -1,10 +1,13 @@
 import psycopg2
 from models import UserRole, UserStatus
+import utils
+from session import Session
+from utils import Response
 
 db_params = {
-    'database': 'n44r',
+    'database': 'n48',
     'user': 'postgres',
-    'password': '123',
+    'password': '1',
     'host': 'localhost',
     'port': 5432
 }
@@ -42,7 +45,7 @@ def migrate():
     insert into users(username, password, role, status, login_try_count)
     values (%s,%s,%s,%s,%s);
     """
-    user_data = ('admin', '123', UserRole.ADMIN.value, UserStatus.ACTIVE.value, 0)
+    user_data = ('admin', utils.hash_password('123'), UserRole.ADMIN.value, UserStatus.ACTIVE.value, 0)
     cursor.execute(insert_admin_user_query, user_data)
     conn.commit()
 
@@ -56,6 +59,19 @@ def commit(func):
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
         conn.commit()
+        return result
+
+    return wrapper
+
+
+session = Session()
+
+
+def is_authenticated(func):
+    def wrapper(*args, **kwargs):
+        if not session.session:
+            return Response('Not authenticated', status_code=404)
+        result = func(*args, **kwargs)
         return result
 
     return wrapper
